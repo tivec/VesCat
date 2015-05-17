@@ -1,0 +1,7 @@
+# Binaries
+Astrotech/
+bin/
+
+# Various scripts
+cleanup
+copyover
