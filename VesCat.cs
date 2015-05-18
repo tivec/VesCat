@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace VesCat
 {
-	[KSPScenario(ScenarioCreationOptions.AddToAllGames,GameScenes.TRACKSTATION,GameScenes.FLIGHT)] 
+	[KSPScenario(ScenarioCreationOptions.AddToAllGames,GameScenes.TRACKSTATION,GameScenes.FLIGHT,GameScenes.SPACECENTER)] 
 	public class VesCat : ScenarioModule
 	{
 		public static Guid ROOT_GUID = new Guid("142599e6-0f50-4994-a7f8-6474e9893acc");
@@ -93,6 +93,9 @@ namespace VesCat
 
 		public override void OnSave (ConfigNode node)
 		{
+
+			ScreenMessages.PostScreenMessage ("VesCat: Saved.");
+
 			// categories
 			ConfigNode cat = new ConfigNode ("CATEGORIES");
 			foreach (KeyValuePair<Guid,String> entry in categories) {
