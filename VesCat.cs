@@ -14,30 +14,105 @@ namespace VesCat
 		private Dictionary<Guid,Guid> vessels = new Dictionary<Guid, Guid>();		// A dictionary of all known vessels
 		private Dictionary<Guid,String> categories = new Dictionary<Guid,String>(); // all categories the player has created
 		private Dictionary<Guid,Guid> categoryParents = new Dictionary<Guid,Guid>(); // the parenthood of each category.
+		private List<Vessel> allKnownVessels = new List<Vessel>();
 
 		public VesCat()
 		{
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: Constructor");
 		}
 
+		public void onVesselCreated(Vessel v) 
+		{
+			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " created.");
+			if (v.DiscoveryInfo.Level != DiscoveryLevels.Owned) {
+				return; // bail out if the vessel isn't owned
+			}
+
+			// add it to known vessels
+			if (!allKnownVessels.Contains(v)) {
+				allKnownVessels.Add (v);
+			} 
+
+			// and add it to our list of vessels to 
+			if (!vessels.ContainsKey(v.id)) {
+				vessels.Add (v.id, VesCat.ROOT_GUID);
+			}
+		}
+
+		public void onVesselDestroyed(Vessel v)
+		{
+			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " destroyed.");
+			if (v.DiscoveryInfo.Level != DiscoveryLevels.Owned) {
+				return; // bail out if the vessel isn't owned
+			}
+
+			if (allKnownVessels.Contains(v)) {
+				allKnownVessels.Remove (v);
+			}
+
+			if (vessels.ContainsKey(v.id)) {
+				vessels.Remove (v.id);
+			}
+		}
+
+		public void UpdateVessels()
+		{
+			// update our list of known vessels
+			allKnownVessels = new List<Vessel> ();
+			foreach (Vessel v in FlightGlobals.Vessels.Where(vs => vs.DiscoveryInfo.Level == DiscoveryLevels.Owned)) {
+				allKnownVessels.Add (v);
+			}
+
+			// first check vesList against vessels to see if we have any new vessels
+			foreach (Vessel v in allKnownVessels){
+				if (!vessels.ContainsKey(v.id)) {
+					vessels.Add (v.id, VesCat.ROOT_GUID); // if it doesn't exist, add it as a ROOT_GUID sorted vessel.
+				}
+			}
+
+			// now we check if all the vessels in vessels exist
+			List<Guid> toRemove = new List<Guid> ();
+			foreach (Guid id in vessels.Keys) {
+
+				if (!allKnownVessels.Exists(vS => vS.id == id)) {
+					toRemove.Add (id);
+				}
+			}
+
+			// finally, remove those that no longer exist from the vessels dictionary.
+			foreach(Guid id in toRemove) {
+				vessels.Remove (id);
+			}
+
+		}
+
+		public String GetVesselName(Guid id)
+		{
+			Vessel v = allKnownVessels.Find (vs => vs.id == id);
+			if (v != null) {
+				return v.GetName ();
+			}
+
+			return "BUG: Unknown vessel Guid("+id.ToString()+")";
+		}
+
 		void Start()
 		{
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: Start");
 
-			// iterate all vessels that the player owns, and see if they need to be added to the vessels list
-			foreach(Vessel v in FlightGlobals.Vessels.Where(vs => vs.DiscoveryInfo.Level == DiscoveryLevels.Owned))
-			{
-				Debug.Log ("[VesCat] Found vessel " + v.name + " (" + v.id + ")");
-				if (!vessels.ContainsKey (v.id)) {
-					vessels.Add (v.id, ROOT_GUID); // if it doesn't exist, add it as a ROOT_GUID sorted vessel.
-				}
+			UpdateVessels ();
+			foreach(Guid g in vessels.Keys){
+				ScreenMessages.PostScreenMessage ("Vessel " + GetVesselName(g) );
 			}
 
+			GameEvents.onVesselCreate.Add (onVesselCreated);
+			GameEvents.onVesselDestroy.Add (onVesselDestroyed);
 
 		}
 
 		public override void OnLoad (ConfigNode node)
 		{
+			ScreenMessages.PostScreenMessage ("VesCat: OnLoad.");
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: OnLoad");
 			categories = new Dictionary<Guid, string>(); // reinit this so we don't get duplicates.
 
@@ -94,7 +169,7 @@ namespace VesCat
 		public override void OnSave (ConfigNode node)
 		{
 
-			ScreenMessages.PostScreenMessage ("VesCat: Saved.");
+			ScreenMessages.PostScreenMessage ("VesCat: OnSave.");
 
 			// categories
 			ConfigNode cat = new ConfigNode ("CATEGORIES");
@@ -112,6 +187,7 @@ namespace VesCat
 				vess.AddValue(entry.Key.ToString (), entry.Value.ToString ());
 			}
 
+			// add the save nodes.
 			node.AddNode (cat);
 			node.AddNode (catP);
 			node.AddNode (vess);
@@ -124,6 +200,9 @@ namespace VesCat
 
 		void OnDestroy()
 		{
+			GameEvents.onVesselCreate.Remove (onVesselCreated);
+			GameEvents.onVesselDestroy.Remove (onVesselDestroyed);
+
 			Debug.Log ("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: OnDestroy");
 		}
 
