@@ -28,6 +28,7 @@ namespace VesCat
 		public void onVesselDestroyed(Vessel v)
 		{
 			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " destroyed.");
+			Data.RemoveVessel (v);
 		}
 
 		void Start()
