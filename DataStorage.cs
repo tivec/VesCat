@@ -17,6 +17,8 @@ namespace VesCat
 		private Dictionary<Guid,Guid> categoryParents = new Dictionary<Guid,Guid>(); // the parenthood of each category.
 		private List<Vessel> allKnownVessels = new List<Vessel>();
 
+
+
 		public static DataStorage Instance {
 			get {
 				return _instance;
@@ -107,6 +109,37 @@ namespace VesCat
 			}
 		}
 
+		public void AddCategory(string category) {
+			Guid id = Guid.NewGuid ();
+			// add the category, and set its parent to root
+			Categories.Add (id, category);
+			CategoryParents.Add (id, ROOT_GUID);
+		}
+
+		// returns the parent of the given Guid
+		public Guid getParent(Guid id) {
+			if (CategoryParents.ContainsKey(id)) {
+				return CategoryParents[id];
+			} else if (Vessels.ContainsKey(id)) {
+				return Vessels [id];
+			}
+			return ROOT_GUID;
+		}
+
+		public void setParent(Guid id, Guid parent) {
+			if (!Categories.ContainsKey (parent) && parent != ROOT_GUID) {
+				// we can't assign to unknown categories, or other vessels
+				return;
+			} else {
+				if (Categories.ContainsKey (id)) {
+					Debug.Log ("Assigning parent category " + parent + " to category " + id);
+					CategoryParents [id] = parent;
+				} else if (Vessels.ContainsKey (id)) {
+					Debug.Log ("Assigning parent category " + parent + " to vessel " + id);
+					Vessels [id] = parent;
+				}
+			}
+		}
 	}
 }
 

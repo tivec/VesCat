@@ -10,7 +10,7 @@ namespace VesCat
 	public class VesCat : ScenarioModule
 	{
 
-		private UITools UI = new UITools();
+		private VCUI UI = new VCUI();
 		private CommonTools Tools = CommonTools.Instance;
 		private DataStorage Data = DataStorage.Instance;
 
@@ -70,11 +70,21 @@ namespace VesCat
 					Guid category = new Guid (v.name);
 					Guid parent = new Guid (v.value);
 
+					// validate the category
+					if (!Data.Categories.ContainsKey(category)) {
+						continue;
+					}
+
+					// validate the parent category
 					if (!Data.Categories.ContainsKey (parent)) {
 						parent = DataStorage.ROOT_GUID;
 					}
 
-					Data.CategoryParents.Add (category, parent);
+					if (!Data.CategoryParents.ContainsKey (category)) {
+						Data.CategoryParents.Add (category, parent);
+					} else {
+						Data.CategoryParents [category] = parent;
+					}
 				}
 			}
 
@@ -83,20 +93,30 @@ namespace VesCat
 			{
 				foreach (ConfigNode.Value v in n.values) {
 
-					// does the vessel exist?
 					Guid vGuid = new Guid (v.name);
 					Guid vParent = new Guid (v.value);
 
+					// Verify that the category exists
+					if (!Data.Categories.ContainsKey (vParent)) {
+						vParent = DataStorage.ROOT_GUID;
+					}
+
 					if (!Data.Vessels.ContainsKey (vGuid)) {
+						// does the vessel exist?
 						if (!FlightGlobals.Vessels.Exists(vS => vS.id == vGuid)) {
 							continue;
 						}
 
-						if (!Data.Categories.ContainsKey (vParent)) {
-							vParent = DataStorage.ROOT_GUID;
-						}
-					
+						// Add it to the data
+						Data.Vessels.Add (vGuid, vParent);
+
+					} else {
+						// update data with info from save
+						Data.Vessels [vGuid] = vParent;
 					}
+
+
+
 				}
 			}
 		}
@@ -131,6 +151,10 @@ namespace VesCat
 
 		void OnGUI()
 		{
+			if (UIStyle.UISkin == null) {
+				UIStyle.customSkin ();
+			}
+
 			UI.DrawGUI ();
 		}
 

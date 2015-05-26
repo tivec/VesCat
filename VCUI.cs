@@ -5,22 +5,36 @@ using UnityEngine;
 
 namespace VesCat
 {
+	enum uiMode
+	{
+		normal,
+		changeCategory,
+		addCategory
+	}
+
 	public class VCUI
 	{
 		// Windows
 		private Rect mainWindowRect = new Rect(100, 100, 250, 250);
-		private Rect newCategoryWindowRect = new Rect (100, 100, 250, 250);
 
 		// hashed Guids for unique identifiers
 		private int mainGUIWindowGuid;
-		private int newCategoryWindowGuid;
 
 		// Gui visible at all?
 		private bool GUIVisible = true;
-		private bool newCategoryVisible = false;
-
-		// Main gui list
+		// Main list of stuff
 		private Vector2 vesselListScroll;
+
+		// a dictionary showing if a given parent node is visible.
+		private Dictionary<Guid, bool> visibleNodes = new Dictionary<Guid, bool> (); 
+
+		// new category string storage
+		string newCatString = "";
+
+		uiMode currentMode = uiMode.normal;
+
+		// scheduled actions
+		List<Action> scheduled = new List<Action> ();
 
 		private CommonTools Tools = CommonTools.Instance;
 		private DataStorage Data = DataStorage.Instance;
@@ -29,32 +43,57 @@ namespace VesCat
 		public VCUI ()
 		{
 			mainGUIWindowGuid = Guid.NewGuid ().GetHashCode (); // unique ID for the gui window.
-			newCategoryWindowGuid = Guid.NewGuid ().GetHashCode (); // unique ID for the new category window
+			visibleNodes [DataStorage.ROOT_GUID] = true;
 		}
 
 		public void DrawGUI()
 		{
+			if (Event.current.type == EventType.Layout && scheduled.Count > 0) {
+				foreach(Action a in scheduled) {
+					a ();
+				}
+				scheduled.Clear ();
+			}
+
 			if (GUIVisible) {
 				mainWindowRect = GUILayout.Window(mainGUIWindowGuid, mainWindowRect, mainGUIWindow, "Vessel Categorizer", GUILayout.Width(0), GUILayout.Height(0));
 
-				if (newCategoryVisible) {
-					newCategoryWindowRect = GUILayout.Window(newCategoryWindowGuid, newCategoryWindowRect, newCategoryWindow, "New category", GUILayout.Width (0), GUILayout.Height (0));
-					// make the window stick to the main window
-					newCategoryWindowRect.x = mainWindowRect.x + mainWindowRect.width + 5;
-					newCategoryWindowRect.y = mainWindowRect.y;
-				}
 			}
 		}
 
-		public void newCategoryWindow(int windowID)
+		// recursive function to draw each category
+		public void drawCategory(Guid id, int depth, bool drawCategories = false, Action<Guid> callback = null)
 		{
-			GUILayout.BeginVertical ();
-			string text = GUILayout.TextField ("", GUILayout.Width (100), GUILayout.Height (20));
-			if (GUILayout.Button("Save")) {
-				statusString = text;
-				newCategoryVisible = false;
+			// first we draw all the categories, and check if they are enabled
+			foreach (KeyValuePair<Guid, string> category in Data.Categories.Where(cw => Data.getParent(cw.Key) == id)) {
+
+				// first make sure it's among the known visible nodes. Start as false.
+				if (!visibleNodes.ContainsKey(category.Key)) {
+					visibleNodes [category.Key] = false;
+				}
+
+				GUILayout.BeginHorizontal ();
+
+				if (depth > 0) {
+					GUILayout.Space (depth * 10);
+				}
+
+				visibleNodes[category.Key] = GUILayout.Toggle (visibleNodes[category.Key], category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton]);
+				GUILayout.EndHorizontal ();
+				// if the category is visible, we will also draw everything known beneath it
+				if (visibleNodes[category.Key] || drawCategories) {
+					drawCategory (category.Key, depth + 1, drawCategories, callback);
+				}
 			}
-			GUILayout.EndVertical();
+
+			foreach (Guid vesselId in Data.Vessels.Keys.Where(vw => Data.getParent(vw) == id)) {
+				GUILayout.BeginHorizontal ();
+				if (depth > 0) {
+					GUILayout.Space (depth * 10);
+				}
+				GUILayout.Button (Tools.GetVesselName (vesselId), UIStyle.UISkin.customStyles [(int)uiStyles.vesselButton]);
+				GUILayout.EndHorizontal ();
+			}
 		}
 
 		public void mainGUIWindow(int windowID)
@@ -62,34 +101,39 @@ namespace VesCat
 			GUILayout.Label ("Status: " + statusString);
 			GUILayout.BeginVertical();
 
-			int vesselsListHeight = Math.Min (Math.Max (Data.Vessels.Count * 10, 100), 100);
-
+			// calculate how big the window should be here
+			int vesselsListHeight = Math.Min (Math.Max ((Data.Vessels.Count + Data.Categories.Count + 1) * 15, 400), 600);
 			vesselListScroll = GUILayout.BeginScrollView (vesselListScroll, GUILayout.Width(400), GUILayout.Height(vesselsListHeight));
 
-			foreach (KeyValuePair<Guid,String> category in Data.Categories) {
-				GUILayout.Button (category.Value);
-			}
+			drawCategory (DataStorage.ROOT_GUID, 0);
 
-			foreach (Guid id in Data.Vessels.Keys) {
-				if(GUILayout.Button (Tools.GetVesselName(id))) {
-					try {
-						Vessel v = Tools.GetVessel(id);
-						statusString = "Clicked " + v.GetName();
-					} catch (NullReferenceException ex) {
-						// We couldn't find the vessel. That's bad.
-						statusString = ex.Message.ToString ();
-					}
-				}
-			}
 			GUILayout.EndScrollView ();
 			GUILayout.EndVertical();
 
-			GUILayout.BeginHorizontal ();
-			if (GUILayout.Button("Add new category"))
-			{
-				newCategoryVisible = true;
+			if (currentMode == uiMode.addCategory) {
+				GUILayout.BeginVertical ();
+				newCatString = GUILayout.TextField (newCatString);
+				GUILayout.BeginHorizontal ();
+				if (GUILayout.Button("Save")) {
+					Data.AddCategory (newCatString);
+					currentMode = uiMode.normal;
+					statusString = "Added new category '" + newCatString + "'.";
+				}
+				if (GUILayout.Button("Cancel")) {
+						currentMode = uiMode.normal;
+				}
+				GUILayout.EndHorizontal ();
+				GUILayout.EndVertical();
+
+			} else {
+				GUILayout.BeginHorizontal ();
+				if (GUILayout.Button("Add new category"))
+				{
+					newCatString = "";
+					currentMode = uiMode.addCategory;
+				}
+				GUILayout.EndHorizontal ();
 			}
-			GUILayout.EndHorizontal ();
 
 
 			GUI.DragWindow (); // make it draggable.
