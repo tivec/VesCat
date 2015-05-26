@@ -15,18 +15,13 @@ namespace VesCat
 		private Vector2 vesselListScroll;
 
 		private Rect mainWindow = new Rect(100, 100, 250, 250);
-		private Dictionary<Guid,Guid> vessels = new Dictionary<Guid, Guid> ();
 		private CommonTools Tools = CommonTools.Instance;
+		private DataStorage Data = DataStorage.Instance;
 		private String statusString = "";
 
 		public UITools ()
 		{
 			mainGUIWindowGuid = Guid.NewGuid ().GetHashCode (); // unique ID for the gui window.
-		}
-
-		public void updateVessels(Dictionary<Guid,Guid> ves)
-		{
-			vessels = ves;
 		}
 
 		public void DrawGUI()
@@ -41,7 +36,7 @@ namespace VesCat
 			GUILayout.Label ("Status: " + statusString);
 			GUILayout.BeginVertical();
 			vesselListScroll = GUILayout.BeginScrollView (vesselListScroll, GUILayout.Width(400), GUILayout.Height(100));
-			foreach (Guid id in vessels.Keys) {
+			foreach (Guid id in Data.Vessels.Keys) {
 				if(GUILayout.Button (Tools.GetVesselName(id))) {
 					try {
 						Vessel v = Tools.GetVessel(id);

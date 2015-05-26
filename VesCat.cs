@@ -10,11 +10,6 @@ namespace VesCat
 	public class VesCat : ScenarioModule
 	{
 
-
-		private Dictionary<Guid,Guid> vessels = new Dictionary<Guid, Guid>();		// A dictionary of all known vessels
-		private Dictionary<Guid,String> categories = new Dictionary<Guid,String>(); // all categories the player has created
-		private Dictionary<Guid,Guid> categoryParents = new Dictionary<Guid,Guid>(); // the parenthood of each category.
-		private List<Vessel> allKnownVessels = new List<Vessel>();
 		private UITools UI = new UITools();
 		private CommonTools Tools = CommonTools.Instance;
 		private DataStorage Data = DataStorage.Instance;
@@ -27,78 +22,20 @@ namespace VesCat
 		public void onVesselCreated(Vessel v) 
 		{
 			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " created.");
-			if (v.DiscoveryInfo.Level != DiscoveryLevels.Owned) {
-				return; // bail out if the vessel isn't owned
-			}
-
-			// add it to known vessels
-			if (!allKnownVessels.Contains(v)) {
-				allKnownVessels.Add (v);
-			} 
-
-			// and add it to our list of vessels to 
-			if (!vessels.ContainsKey(v.id)) {
-				vessels.Add (v.id, Data.ROOT_GUID);
-			}
-			UI.updateVessels (vessels);
+			Data.AddVessel (v);
 		}
 
 		public void onVesselDestroyed(Vessel v)
 		{
 			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " destroyed.");
-			if (v.DiscoveryInfo.Level != DiscoveryLevels.Owned) {
-				return; // bail out if the vessel isn't owned
-			}
-
-			if (allKnownVessels.Contains(v)) {
-				allKnownVessels.Remove (v);
-			}
-
-			if (vessels.ContainsKey(v.id)) {
-				vessels.Remove (v.id);
-			}
-
-			UI.updateVessels (vessels);
-		}
-
-		public void UpdateVessels()
-		{
-			// update our list of known vessels
-			allKnownVessels = new List<Vessel> ();
-			foreach (Vessel v in FlightGlobals.Vessels.Where(vs => vs.DiscoveryInfo.Level == DiscoveryLevels.Owned)) {
-				allKnownVessels.Add (v);
-			}
-
-			// first check vesList against vessels to see if we have any new vessels
-			foreach (Vessel v in allKnownVessels){
-				if (!vessels.ContainsKey(v.id)) {
-					vessels.Add (v.id, Data.ROOT_GUID); // if it doesn't exist, add it as a ROOT_GUID sorted vessel.
-				}
-			}
-
-			// now we check if all the vessels in vessels exist
-			List<Guid> toRemove = new List<Guid> ();
-			foreach (Guid id in vessels.Keys) {
-
-				if (!allKnownVessels.Exists(vS => vS.id == id)) {
-					toRemove.Add (id);
-				}
-			}
-
-			// finally, remove those that no longer exist from the vessels dictionary.
-			foreach(Guid id in toRemove) {
-				vessels.Remove (id);
-			}
-
-			UI.updateVessels (vessels);
 		}
 
 		void Start()
 		{
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: Start");
 
-			UpdateVessels ();
-			foreach(Guid g in vessels.Keys){
+			Data.UpdateVessels ();
+			foreach(Guid g in Data.Vessels.Keys){
 				ScreenMessages.PostScreenMessage ("Vessel " + Tools.GetVesselName(g) );
 			}
 
@@ -111,7 +48,7 @@ namespace VesCat
 		{
 			ScreenMessages.PostScreenMessage ("VesCat: OnLoad.");
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: OnLoad");
-			categories = new Dictionary<Guid, string>(); // reinit this so we don't get duplicates.
+			Data.Categories = new Dictionary<Guid, string>(); // reinit this so we don't get duplicates.
 
 			// load up all categories from persistent.sfs
 			foreach (ConfigNode n in node.GetNodes().Where(n => n.name == "CATEGORIES"))
@@ -120,8 +57,8 @@ namespace VesCat
 					Guid categoryID = new Guid (v.name);
 					String categoryName = v.value;
 
-					if (!categories.ContainsKey (categoryID)) {
-						categories.Add (categoryID, categoryName);
+					if (!Data.Categories.ContainsKey (categoryID)) {
+						Data.Categories.Add (categoryID, categoryName);
 					}
 				}
 			}
@@ -132,11 +69,11 @@ namespace VesCat
 					Guid category = new Guid (v.name);
 					Guid parent = new Guid (v.value);
 
-					if (!categories.ContainsKey (parent)) {
-						parent = Data.ROOT_GUID;
+					if (!Data.Categories.ContainsKey (parent)) {
+						parent = DataStorage.ROOT_GUID;
 					}
 
-					categoryParents.Add (category, parent);
+					Data.CategoryParents.Add (category, parent);
 				}
 			}
 
@@ -149,13 +86,13 @@ namespace VesCat
 					Guid vGuid = new Guid (v.name);
 					Guid vParent = new Guid (v.value);
 
-					if (!vessels.ContainsKey (vGuid)) {
+					if (!Data.Vessels.ContainsKey (vGuid)) {
 						if (!FlightGlobals.Vessels.Exists(vS => vS.id == vGuid)) {
 							continue;
 						}
 
-						if (!categories.ContainsKey (vParent)) {
-							vParent = Data.ROOT_GUID;
+						if (!Data.Categories.ContainsKey (vParent)) {
+							vParent = DataStorage.ROOT_GUID;
 						}
 					
 					}
@@ -170,17 +107,17 @@ namespace VesCat
 
 			// categories
 			ConfigNode cat = new ConfigNode ("CATEGORIES");
-			foreach (KeyValuePair<Guid,String> entry in categories) {
+			foreach (KeyValuePair<Guid,String> entry in Data.Categories) {
 				cat.AddValue (entry.Key.ToString (), entry.Value);
 			}
 			// category parents
 			ConfigNode catP = new ConfigNode ("CATEGORYPARENTS");
-			foreach (KeyValuePair<Guid,Guid> entry in categoryParents) {
+			foreach (KeyValuePair<Guid,Guid> entry in Data.CategoryParents) {
 				catP.AddValue (entry.Key.ToString (), entry.Value.ToString ());
 			}
 			// vessels
 			ConfigNode vess = new ConfigNode ("VESSELS");
-			foreach (KeyValuePair<Guid,Guid> entry in vessels) {
+			foreach (KeyValuePair<Guid,Guid> entry in Data.Vessels) {
 				vess.AddValue(entry.Key.ToString (), entry.Value.ToString ());
 			}
 

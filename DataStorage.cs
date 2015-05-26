@@ -10,7 +10,7 @@ namespace VesCat
 
 		static readonly DataStorage _instance = new DataStorage();
 
-		private Guid root_guid = new Guid("142599e6-0f50-4994-a7f8-6474e9893acc");
+		public static Guid ROOT_GUID = new Guid("142599e6-0f50-4994-a7f8-6474e9893acc");
 
 		private Dictionary<Guid,Guid> vessels = new Dictionary<Guid, Guid>();		// A dictionary of all known vessels
 		private Dictionary<Guid,String> categories = new Dictionary<Guid,String>(); // all categories the player has created
@@ -27,9 +27,12 @@ namespace VesCat
 		{
 		}
 
-		public Guid ROOT_GUID {
+		public Dictionary<Guid, Guid> Vessels {
 			get {
-				return root_guid;
+				return this.vessels;
+			}
+			set {
+				vessels = value;
 			}
 		}
 
@@ -37,11 +40,17 @@ namespace VesCat
 			get {
 				return this.categories;
 			}
+			set {
+				categories = value;
+			}
 		}
 
 		public Dictionary<Guid, Guid> CategoryParents {
 			get {
 				return this.categoryParents;
+			}
+			set {
+				categoryParents = value;
 			}
 		}
 
@@ -50,14 +59,52 @@ namespace VesCat
 				return this.allKnownVessels;
 			}
 		}
-		public Dictionary<Guid, Guid> Vessels {
-			get {
-				return vessels;
+
+		/* This function adds a vessel to the known vessels list. It also makes certain the vessel has a pairing */
+		public void AddVessel(Vessel v) {
+			if (v.DiscoveryInfo.Level != DiscoveryLevels.Owned) {
+				return; // bail out if the vessel isn't owned
+			}
+
+			// add it to known vessels
+			if (!allKnownVessels.Contains(v)) {
+				allKnownVessels.Add (v);
+			} 
+
+			// and add it to our list of vessels to 
+			if (!vessels.ContainsKey(v.id)) {
+				vessels.Add (v.id, ROOT_GUID);
 			}
 		}
 
-		public void AddVessel(Vessel v) {
+		/* This function removes a vessel from the known vessels list. It also forgets about pairing. */
+		public void RemoveVessel(Vessel v) {
+			if (allKnownVessels.Contains(v)) {
+				allKnownVessels.Remove (v);
+			}
 
+			if (vessels.ContainsKey(v.id)) {
+				vessels.Remove (v.id);
+			}
+		}
+
+		public void UpdateVessels() {
+			foreach (Vessel v in FlightGlobals.Vessels.Where(vs => vs.DiscoveryInfo.Level == DiscoveryLevels.Owned)) {
+				AddVessel (v);
+			}
+
+			// now we check if all the vessels in vessels exist
+			List<Guid> toRemove = new List<Guid> ();
+			foreach (Guid id in Vessels.Keys) {
+				if (!FlightGlobals.Vessels.Exists(vS => vS.id == id)) {
+					toRemove.Add (id);
+				}
+			}
+
+			// finally, remove those that no longer exist from the vessels dictionary.
+			foreach(Guid id in toRemove) {
+				Vessels.Remove (id);
+			}
 		}
 
 	}
