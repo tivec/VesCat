@@ -9,12 +9,15 @@ namespace VesCat
 	[KSPScenario(ScenarioCreationOptions.AddToAllGames,GameScenes.TRACKSTATION,GameScenes.FLIGHT,GameScenes.SPACECENTER)] 
 	public class VesCat : ScenarioModule
 	{
-		public static Guid ROOT_GUID = new Guid("142599e6-0f50-4994-a7f8-6474e9893acc");
+
 
 		private Dictionary<Guid,Guid> vessels = new Dictionary<Guid, Guid>();		// A dictionary of all known vessels
 		private Dictionary<Guid,String> categories = new Dictionary<Guid,String>(); // all categories the player has created
 		private Dictionary<Guid,Guid> categoryParents = new Dictionary<Guid,Guid>(); // the parenthood of each category.
 		private List<Vessel> allKnownVessels = new List<Vessel>();
+		private UITools UI = new UITools();
+		private CommonTools Tools = CommonTools.Instance;
+		private DataStorage Data = DataStorage.Instance;
 
 		public VesCat()
 		{
@@ -35,8 +38,9 @@ namespace VesCat
 
 			// and add it to our list of vessels to 
 			if (!vessels.ContainsKey(v.id)) {
-				vessels.Add (v.id, VesCat.ROOT_GUID);
+				vessels.Add (v.id, Data.ROOT_GUID);
 			}
+			UI.updateVessels (vessels);
 		}
 
 		public void onVesselDestroyed(Vessel v)
@@ -53,6 +57,8 @@ namespace VesCat
 			if (vessels.ContainsKey(v.id)) {
 				vessels.Remove (v.id);
 			}
+
+			UI.updateVessels (vessels);
 		}
 
 		public void UpdateVessels()
@@ -66,7 +72,7 @@ namespace VesCat
 			// first check vesList against vessels to see if we have any new vessels
 			foreach (Vessel v in allKnownVessels){
 				if (!vessels.ContainsKey(v.id)) {
-					vessels.Add (v.id, VesCat.ROOT_GUID); // if it doesn't exist, add it as a ROOT_GUID sorted vessel.
+					vessels.Add (v.id, Data.ROOT_GUID); // if it doesn't exist, add it as a ROOT_GUID sorted vessel.
 				}
 			}
 
@@ -84,16 +90,7 @@ namespace VesCat
 				vessels.Remove (id);
 			}
 
-		}
-
-		public String GetVesselName(Guid id)
-		{
-			Vessel v = allKnownVessels.Find (vs => vs.id == id);
-			if (v != null) {
-				return v.GetName ();
-			}
-
-			return "BUG: Unknown vessel Guid("+id.ToString()+")";
+			UI.updateVessels (vessels);
 		}
 
 		void Start()
@@ -102,7 +99,7 @@ namespace VesCat
 
 			UpdateVessels ();
 			foreach(Guid g in vessels.Keys){
-				ScreenMessages.PostScreenMessage ("Vessel " + GetVesselName(g) );
+				ScreenMessages.PostScreenMessage ("Vessel " + Tools.GetVesselName(g) );
 			}
 
 			GameEvents.onVesselCreate.Add (onVesselCreated);
@@ -136,7 +133,7 @@ namespace VesCat
 					Guid parent = new Guid (v.value);
 
 					if (!categories.ContainsKey (parent)) {
-						parent = ROOT_GUID;
+						parent = Data.ROOT_GUID;
 					}
 
 					categoryParents.Add (category, parent);
@@ -158,7 +155,7 @@ namespace VesCat
 						}
 
 						if (!categories.ContainsKey (vParent)) {
-							vParent = ROOT_GUID;
+							vParent = Data.ROOT_GUID;
 						}
 					
 					}
@@ -191,6 +188,12 @@ namespace VesCat
 			node.AddNode (cat);
 			node.AddNode (catP);
 			node.AddNode (vess);
+
+		}
+
+		void OnGUI()
+		{
+			UI.DrawGUI ();
 		}
 
 		public override void OnAwake ()
