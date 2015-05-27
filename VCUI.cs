@@ -49,23 +49,6 @@ namespace VesCat
 			visibleNodes [DataStorage.ROOT_GUID] = true;
 		}
 
-		public void DrawCategoryButton(String text, Color background, bool enable, Action onEnable, Action onDisable, params GUILayoutOption[] options) {
-			Color defaultBG = GUI.backgroundColor;
-
-			if (enable) {
-				GUI.backgroundColor = background;
-				if (GUILayout.Button(text, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton], options)) {
-					onDisable ();
-				}
-			} else {
-				if (GUILayout.Button(text, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton], options)) {
-					onEnable ();
-				}
-			}
-
-			GUI.backgroundColor = defaultBG;
-		}
-
 		public void DrawGUI()
 		{
 			if (Event.current.type == EventType.Layout && scheduled.Count > 0) {
@@ -119,19 +102,10 @@ namespace VesCat
 				if (currentMode == uiMode.normal) {
 					Color defaultColor = GUI.backgroundColor;
 
-					DrawCategoryButton (category.Value, XKCDColors.DarkCyan, visibleNodes [category.Key], 
-					                 () => {
-						if (Event.current.button == 1) {
-							StartMovingCategory(category.Key);
-						} else {
-							visibleNodes [category.Key] = true; 
-						}},
-					                 () => {
-						if (Event.current.button == 1) {
-							StartMovingCategory(category.Key);
-						} else {
-							visibleNodes [category.Key] = false; }
-						});
+					UITools.DrawCategoryButton (category.Value, XKCDColors.DarkCyan, visibleNodes [category.Key], 
+					                            () => {visibleNodes [category.Key] = true; }, 
+												() => {visibleNodes [category.Key] = false; },
+												() => {StartMovingCategory(category.Key);});
 
 					GUI.backgroundColor = defaultColor;
 

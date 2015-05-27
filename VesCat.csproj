@@ -52,6 +52,7 @@
     <Compile Include="DataStorage.cs" />
     <Compile Include="VCUI.cs" />
     <Compile Include="UIStyle.cs" />
+    <Compile Include="UITools.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
