@@ -8,7 +8,7 @@ namespace VesCat
 	enum uiMode
 	{
 		normal,
-		changeCategory,
+		editCategories,
 		addCategory
 	}
 
@@ -78,8 +78,13 @@ namespace VesCat
 					GUILayout.Space (depth * 10);
 				}
 
-				visibleNodes[category.Key] = GUILayout.Toggle (visibleNodes[category.Key], category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton]);
+				if (currentMode == uiMode.normal) {
+					visibleNodes [category.Key] = GUILayout.Toggle (visibleNodes [category.Key], category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton]);
+				} else {
+					GUILayout.Button (category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton]);
+				}
 				GUILayout.EndHorizontal ();
+
 				// if the category is visible, we will also draw everything known beneath it
 				if (visibleNodes[category.Key] || drawCategories) {
 					drawCategory (category.Key, depth + 1, drawCategories, callback);
@@ -112,18 +117,30 @@ namespace VesCat
 
 			if (currentMode == uiMode.addCategory) {
 				GUILayout.BeginVertical ();
+				GUILayout.Label ("Please enter a category name:");
 				newCatString = GUILayout.TextField (newCatString);
 				GUILayout.BeginHorizontal ();
-				if (GUILayout.Button("Save")) {
-					Data.AddCategory (newCatString);
-					currentMode = uiMode.normal;
-					statusString = "Added new category '" + newCatString + "'.";
-				}
-				if (GUILayout.Button("Cancel")) {
+				if (GUILayout.Button ("Save")) {
+					if (newCatString.Length > 0) {
+						Data.AddCategory (newCatString);
 						currentMode = uiMode.normal;
+					} else {
+						currentMode = uiMode.normal;
+					}
+				}
+				if (GUILayout.Button ("Cancel")) {
+					currentMode = uiMode.normal;
 				}
 				GUILayout.EndHorizontal ();
-				GUILayout.EndVertical();
+				GUILayout.EndVertical ();
+
+			} else if (currentMode == uiMode.editCategories) {
+				GUILayout.BeginVertical ();
+				GUILayout.Label ("Editing categories");
+				if (GUILayout.Button ("Cancel")) {
+					currentMode = uiMode.normal;
+				}
+				GUILayout.EndVertical ();
 
 			} else {
 				GUILayout.BeginHorizontal ();
@@ -131,6 +148,10 @@ namespace VesCat
 				{
 					newCatString = "";
 					currentMode = uiMode.addCategory;
+				}
+				if (GUILayout.Button("Edit categories")) 
+				{
+					currentMode = uiMode.editCategories;
 				}
 				GUILayout.EndHorizontal ();
 			}

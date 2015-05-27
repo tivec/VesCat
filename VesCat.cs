@@ -114,9 +114,6 @@ namespace VesCat
 						// update data with info from save
 						Data.Vessels [vGuid] = vParent;
 					}
-
-
-
 				}
 			}
 		}
