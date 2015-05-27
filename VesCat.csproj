@@ -48,11 +48,14 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="VesCat.cs" />
+    <Compile Include="VCUI.cs" />
     <Compile Include="CommonTools.cs" />
     <Compile Include="DataStorage.cs" />
-    <Compile Include="VCUI.cs" />
     <Compile Include="UIStyle.cs" />
     <Compile Include="UITools.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Folder Include="Common\" />
+  </ItemGroup>
 </Project>

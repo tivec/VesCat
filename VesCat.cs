@@ -19,13 +19,8 @@ namespace VesCat
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: Constructor");
 		}
 
-		public void NeedVesselsUpdate(Vessel v = null) 
+		public void NeedVesselsUpdate(object __) 
 		{
-			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " created.");
-			if (v.isEVA) {
-				ScreenMessages.PostScreenMessage ("Vessel is EVA!");
-			}
-			//Data.AddVessel (v);
 			Data.NeedUpdate = true;
 		}
 
