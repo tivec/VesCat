@@ -17,6 +17,7 @@ namespace VesCat
 		private Dictionary<Guid,Guid> categoryParents = new Dictionary<Guid,Guid>(); // the parenthood of each category.
 		private List<Vessel> allKnownVessels = new List<Vessel>();
 
+		//private CommonTools Tools = CommonTools.Instance;
 
 
 		public static DataStorage Instance {
@@ -31,7 +32,7 @@ namespace VesCat
 
 		public Dictionary<Guid, Guid> Vessels {
 			get {
-				return this.vessels;
+				return this.vessels; //.OrderBy (v => Tools.GetVesselName (v.Key)).ToDictionary (v => v.Key, v => v.Value);
 			}
 			set {
 				vessels = value;
@@ -40,7 +41,7 @@ namespace VesCat
 
 		public Dictionary<Guid, string> Categories {
 			get {
-				return this.categories;
+				return this.categories; //.OrderBy( c => GetCategoryName(c.Key)).ToDictionary(c => c.Key, c => c.Value);
 			}
 			set {
 				categories = value;
@@ -139,6 +140,10 @@ namespace VesCat
 				return;
 			} else {
 				if (Categories.ContainsKey (id)) {
+					if (!ValidCategoryParent(id, parent)) {
+						Debug.Log ("Tried assigning " + id + " to " + parent + " which is invalid.");
+						return;
+					}
 					Debug.Log ("Assigning parent category " + parent + " to category " + id);
 					CategoryParents [id] = parent;
 				} else if (Vessels.ContainsKey (id)) {
@@ -147,6 +152,53 @@ namespace VesCat
 				}
 			}
 		}
+
+		public bool ValidCategoryParent(Guid id, Guid parent) {
+			// It has to be a valid category. ROOT can't be moved, sorry
+			if (!Categories.ContainsKey(id)) {
+				return false;
+			}
+			// It has to be a known category, or the ROOT as the parent.
+			if (!Categories.ContainsKey (parent) && parent != ROOT_GUID) {
+				return false;
+			}
+
+			// we can't assign yourself to yourself, sorry.
+			if (id == parent) {
+				return false;
+			}
+
+			List<Guid> visitedParents = new List<Guid> ();
+			Guid oldParent = GetParent (id); // we store the old parent.
+
+			CategoryParents [id] = parent; // set it temporarily.
+			Guid step = GetParent (id);
+			int maxStep = 0;
+
+			do {
+				if (visitedParents.Contains(step)) {
+					Debug.Log("[VesCat] Found loop in category assignment.");
+					CategoryParents[id] = oldParent; // Reset
+					return false; // We have a loop here!
+				} 
+
+				visitedParents.Add(step);
+				maxStep += 1;
+				step = GetParent(step);
+			} while(step != ROOT_GUID || maxStep == 100);
+
+			CategoryParents[id] = oldParent; // we reset here, in case we didn't actually want to assign.
+
+			if (maxStep == 100) {
+				Debug.Log("[VesCat] maxStep hit 100 in ValidCategoryParent()!");
+
+				return false;
+			}
+
+			// we got through? Excellent!
+			return true;
+		}
+
 	}
 }
 

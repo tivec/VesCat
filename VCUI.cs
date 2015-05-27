@@ -86,7 +86,7 @@ namespace VesCat
 		public void DrawCategory(Guid id, int depth, bool drawCategories = false)
 		{
 			// first we draw all the categories, and check if they are enabled
-			foreach (KeyValuePair<Guid, string> category in Data.Categories.Where(cw => Data.GetParent(cw.Key) == id)) {
+			foreach (KeyValuePair<Guid, string> category in Data.Categories.Where(cw => Data.GetParent(cw.Key) == id).OrderBy(cw => cw.Value)) {
 
 				// first make sure it's among the known visible nodes. Start as false.
 				if (!visibleNodes.ContainsKey(category.Key)) {
@@ -136,7 +136,7 @@ namespace VesCat
 			}
 
 			if (currentMode == uiMode.normal || currentMode == uiMode.addCategory) {
-				foreach (Guid vesselId in Data.Vessels.Keys.Where(vw => Data.GetParent(vw) == id)) {
+				foreach (Guid vesselId in Data.Vessels.Keys.Where(vw => Data.GetParent(vw) == id).OrderBy(vw => Tools.GetVesselName(vw))) {
 					GUILayout.BeginHorizontal ();
 					if (depth > 0) {
 						GUILayout.Space (depth * 10);
