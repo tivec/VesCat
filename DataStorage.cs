@@ -127,10 +127,11 @@ namespace VesCat
 		}
 
 		public void setParent(Guid id, Guid parent) {
-			if (!Categories.ContainsKey (parent) && parent != ROOT_GUID) {
+			if ((!Categories.ContainsKey (parent) && parent != ROOT_GUID) || id == parent) {
 				// we can't assign to unknown categories, or other vessels
 				return;
 			} else {
+
 				if (Categories.ContainsKey (id)) {
 					Debug.Log ("Assigning parent category " + parent + " to category " + id);
 					CategoryParents [id] = parent;
