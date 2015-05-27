@@ -18,6 +18,7 @@ namespace VesCat
 		private List<Vessel> allKnownVessels = new List<Vessel>();
 
 		//private CommonTools Tools = CommonTools.Instance;
+		private bool needUpdate = true;
 
 
 		public static DataStorage Instance {
@@ -28,6 +29,15 @@ namespace VesCat
 
 		public DataStorage ()
 		{
+		}
+
+		public bool NeedUpdate {
+			get {
+				return needUpdate;
+			}
+			set {
+				needUpdate = value;
+			}
 		}
 
 		public Dictionary<Guid, Guid> Vessels {

@@ -19,16 +19,14 @@ namespace VesCat
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: Constructor");
 		}
 
-		public void onVesselCreated(Vessel v) 
+		public void NeedVesselsUpdate(Vessel v = null) 
 		{
 			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " created.");
-			Data.AddVessel (v);
-		}
-
-		public void onVesselDestroyed(Vessel v)
-		{
-			ScreenMessages.PostScreenMessage ("VesCat: Vessel " + v.GetName() + " destroyed.");
-			Data.RemoveVessel (v);
+			if (v.isEVA) {
+				ScreenMessages.PostScreenMessage ("Vessel is EVA!");
+			}
+			//Data.AddVessel (v);
+			Data.NeedUpdate = true;
 		}
 
 		void Start()
@@ -40,9 +38,9 @@ namespace VesCat
 				ScreenMessages.PostScreenMessage ("Vessel " + Tools.GetVesselName(g) );
 			}
 
-			GameEvents.onVesselCreate.Add (onVesselCreated);
-			GameEvents.onVesselDestroy.Add (onVesselDestroyed);
-
+			GameEvents.onVesselCreate.Add (NeedVesselsUpdate);
+			GameEvents.onVesselDestroy.Add (NeedVesselsUpdate);
+			GameEvents.onVesselChange.Add (NeedVesselsUpdate);
 		}
 
 		public override void OnLoad (ConfigNode node)
@@ -155,6 +153,14 @@ namespace VesCat
 			UI.DrawGUI ();
 		}
 
+		public void Update()
+		{
+			if (Data.NeedUpdate) {
+				Data.UpdateVessels ();
+				Data.NeedUpdate = false;
+			}
+		}
+
 		public override void OnAwake ()
 		{
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: OnAwake");
@@ -162,8 +168,9 @@ namespace VesCat
 
 		void OnDestroy()
 		{
-			GameEvents.onVesselCreate.Remove (onVesselCreated);
-			GameEvents.onVesselDestroy.Remove (onVesselDestroyed);
+			GameEvents.onVesselCreate.Remove (NeedVesselsUpdate);
+			GameEvents.onVesselDestroy.Remove (NeedVesselsUpdate);
+			GameEvents.onVesselChange.Remove (NeedVesselsUpdate);
 
 			Debug.Log ("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: OnDestroy");
 		}
