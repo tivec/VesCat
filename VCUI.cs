@@ -166,6 +166,8 @@ namespace VesCat
 				}
 			}
 
+
+			/************ drawing vessels **************/
 			if (currentMode == uiMode.normal || currentMode == uiMode.addingCategory) {
 				foreach (Guid vesselId in Data.Vessels.Keys.Where(vw => Data.GetParent(vw) == id).OrderBy(vw => Tools.GetVesselName(vw))) {
 					GUILayout.BeginHorizontal ();
@@ -176,6 +178,15 @@ namespace VesCat
 						// clicked the vessel, now figure out what to do...
 						switch (Event.current.button) {
 						case 0:
+							if (currentMode == uiMode.normal) {
+
+								if (HighLogic.LoadedScene == GameScenes.TRACKSTATION) {
+									ScreenMessages.PostScreenMessage ("VesCat: Loaded Scene Has Planetarium: " + HighLogic.LoadedSceneHasPlanetarium.ToString());
+									MapObject mapObject = PlanetariumCamera.fetch.targets.Find(o => (o.vessel != null) && o.vessel.id == vesselId);
+									MapView.MapCamera.SetTarget(mapObject);
+								}
+
+							}
 							break;
 						case 1:
 							if (currentMode == uiMode.normal) {
