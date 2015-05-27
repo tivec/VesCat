@@ -14,7 +14,7 @@ namespace VesCat
 	{
 		public static GUISkin UISkin;
 
-		public static void customSkin()
+		public static void CustomSkin()
 		{
 			UISkin = (GUISkin)MonoBehaviour.Instantiate (UnityEngine.GUI.skin);
 			UISkin.customStyles = new GUIStyle[Enum.GetValues (typeof(uiStyles)).GetLength (0)];

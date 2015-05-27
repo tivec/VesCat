@@ -116,8 +116,15 @@ namespace VesCat
 			CategoryParents.Add (id, ROOT_GUID);
 		}
 
+		public string GetCategoryName(Guid id) {
+			if (!Categories.ContainsKey(id)) {
+				return "BUG: " + id + " has no entry.";
+			}
+			return Categories [id];
+		}
+
 		// returns the parent of the given Guid
-		public Guid getParent(Guid id) {
+		public Guid GetParent(Guid id) {
 			if (CategoryParents.ContainsKey(id)) {
 				return CategoryParents[id];
 			} else if (Vessels.ContainsKey(id)) {
@@ -126,12 +133,11 @@ namespace VesCat
 			return ROOT_GUID;
 		}
 
-		public void setParent(Guid id, Guid parent) {
+		public void SetParent(Guid id, Guid parent) {
 			if ((!Categories.ContainsKey (parent) && parent != ROOT_GUID) || id == parent) {
 				// we can't assign to unknown categories, or other vessels
 				return;
 			} else {
-
 				if (Categories.ContainsKey (id)) {
 					Debug.Log ("Assigning parent category " + parent + " to category " + id);
 					CategoryParents [id] = parent;

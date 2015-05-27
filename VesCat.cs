@@ -149,7 +149,7 @@ namespace VesCat
 		void OnGUI()
 		{
 			if (UIStyle.UISkin == null) {
-				UIStyle.customSkin ();
+				UIStyle.CustomSkin ();
 			}
 
 			UI.DrawGUI ();

@@ -31,6 +31,9 @@ namespace VesCat
 		// new category string storage
 		string newCatString = "";
 
+		// Set category parent
+		Guid modifyingCategory;
+
 		uiMode currentMode = uiMode.normal;
 
 		// scheduled actions
@@ -46,6 +49,23 @@ namespace VesCat
 			visibleNodes [DataStorage.ROOT_GUID] = true;
 		}
 
+		public void DrawCategoryButton(String text, Color background, bool enable, Action onEnable, Action onDisable, params GUILayoutOption[] options) {
+			Color defaultBG = GUI.backgroundColor;
+
+			if (enable) {
+				GUI.backgroundColor = background;
+				if (GUILayout.Button(text, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton], options)) {
+					onDisable ();
+				}
+			} else {
+				if (GUILayout.Button(text, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton], options)) {
+					onEnable ();
+				}
+			}
+
+			GUI.backgroundColor = defaultBG;
+		}
+
 		public void DrawGUI()
 		{
 			if (Event.current.type == EventType.Layout && scheduled.Count > 0) {
@@ -56,16 +76,34 @@ namespace VesCat
 			}
 
 			if (GUIVisible) {
-				mainWindowRect = GUILayout.Window(mainGUIWindowGuid, mainWindowRect, mainGUIWindow, "Vessel Categorizer", GUILayout.Width(0), GUILayout.Height(0));
+				mainWindowRect = GUILayout.Window(mainGUIWindowGuid, mainWindowRect, MainGUIWindow, "Vessel Categorizer", GUILayout.Width(0), GUILayout.Height(0));
 
 			}
 		}
 
+		public void StartMovingCategory(Guid id)
+		{
+			if (currentMode != uiMode.normal) {
+				return;
+			}
+
+			scheduled.Add (() => {
+				currentMode = uiMode.editCategories;
+				modifyingCategory = id;
+				if (modifyingCategory == DataStorage.ROOT_GUID) {
+					statusString = "Click a category to move...";
+				} else {
+					statusString = "Moving category '" + Data.GetCategoryName(id) + "'";
+				}
+			});
+
+		}
+
 		// recursive function to draw each category
-		public void drawCategory(Guid id, int depth, bool drawCategories = false, Action<Guid> callback = null)
+		public void DrawCategory(Guid id, int depth, bool drawCategories = false)
 		{
 			// first we draw all the categories, and check if they are enabled
-			foreach (KeyValuePair<Guid, string> category in Data.Categories.Where(cw => Data.getParent(cw.Key) == id)) {
+			foreach (KeyValuePair<Guid, string> category in Data.Categories.Where(cw => Data.GetParent(cw.Key) == id)) {
 
 				// first make sure it's among the known visible nodes. Start as false.
 				if (!visibleNodes.ContainsKey(category.Key)) {
@@ -79,7 +117,39 @@ namespace VesCat
 				}
 
 				if (currentMode == uiMode.normal) {
-					visibleNodes [category.Key] = GUILayout.Toggle (visibleNodes [category.Key], category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton]);
+					Color defaultColor = GUI.backgroundColor;
+
+					DrawCategoryButton (category.Value, XKCDColors.DarkCyan, visibleNodes [category.Key], 
+					                 () => {
+						if (Event.current.button == 1) {
+							StartMovingCategory(category.Key);
+						} else {
+							visibleNodes [category.Key] = true; 
+						}},
+					                 () => {
+						if (Event.current.button == 1) {
+							StartMovingCategory(category.Key);
+						} else {
+							visibleNodes [category.Key] = false; }
+						});
+
+					GUI.backgroundColor = defaultColor;
+
+
+				} else if (currentMode == uiMode.editCategories) {
+					if (GUILayout.Button(category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton])) {
+						// if we are clicking a button, and the modifyingCategory Guid is ROOT_GUID, we want to set the
+						// modifying category option.
+						if (modifyingCategory.Equals (DataStorage.ROOT_GUID)) {
+							StartMovingCategory (category.Key);
+						} else {
+							scheduled.Add (() => {
+								Data.SetParent(modifyingCategory, category.Key);
+								modifyingCategory = DataStorage.ROOT_GUID;
+								currentMode = uiMode.normal;
+							});
+						}
+					}
 				} else {
 					GUILayout.Button (category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton]);
 				}
@@ -87,21 +157,23 @@ namespace VesCat
 
 				// if the category is visible, we will also draw everything known beneath it
 				if (visibleNodes[category.Key] || drawCategories) {
-					drawCategory (category.Key, depth + 1, drawCategories, callback);
+					DrawCategory (category.Key, depth + 1, drawCategories);
 				}
 			}
 
-			foreach (Guid vesselId in Data.Vessels.Keys.Where(vw => Data.getParent(vw) == id)) {
-				GUILayout.BeginHorizontal ();
-				if (depth > 0) {
-					GUILayout.Space (depth * 10);
+			if (currentMode == uiMode.normal || currentMode == uiMode.addCategory) {
+				foreach (Guid vesselId in Data.Vessels.Keys.Where(vw => Data.GetParent(vw) == id)) {
+					GUILayout.BeginHorizontal ();
+					if (depth > 0) {
+						GUILayout.Space (depth * 10);
+					}
+					GUILayout.Button (Tools.GetVesselName (vesselId), UIStyle.UISkin.customStyles [(int)uiStyles.vesselButton]);
+					GUILayout.EndHorizontal ();
 				}
-				GUILayout.Button (Tools.GetVesselName (vesselId), UIStyle.UISkin.customStyles [(int)uiStyles.vesselButton]);
-				GUILayout.EndHorizontal ();
 			}
 		}
 
-		public void mainGUIWindow(int windowID)
+		public void MainGUIWindow(int windowID)
 		{
 			GUILayout.Label ("Status: " + statusString);
 			GUILayout.BeginVertical();
@@ -110,11 +182,29 @@ namespace VesCat
 			int vesselsListHeight = Math.Min (Math.Max ((Data.Vessels.Count + Data.Categories.Count + 1) * 15, 400), 600);
 			vesselListScroll = GUILayout.BeginScrollView (vesselListScroll, GUILayout.Width(400), GUILayout.Height(vesselsListHeight));
 
-			drawCategory (DataStorage.ROOT_GUID, 0);
+			if (currentMode == uiMode.editCategories) {
+
+				if (GUILayout.Button("No category")) {
+					// if we are clicking a button, and the modifyingCategory Guid is ROOT_GUID, we want to set the
+					// modifying category option.
+					if (!modifyingCategory.Equals (DataStorage.ROOT_GUID)) {
+						scheduled.Add (() => {
+							Data.SetParent(modifyingCategory, DataStorage.ROOT_GUID);
+							modifyingCategory = DataStorage.ROOT_GUID;
+							currentMode = uiMode.normal;
+						});
+					}
+				}
+
+				DrawCategory (DataStorage.ROOT_GUID, 1, true);
+			} else {
+				DrawCategory (DataStorage.ROOT_GUID, 0);
+			}
 
 			GUILayout.EndScrollView ();
 			GUILayout.EndVertical();
 
+			/**************** ADDING A CATEGORY ******************/
 			if (currentMode == uiMode.addCategory) {
 				GUILayout.BeginVertical ();
 				GUILayout.Label ("Please enter a category name:");
@@ -134,14 +224,17 @@ namespace VesCat
 				GUILayout.EndHorizontal ();
 				GUILayout.EndVertical ();
 
+			/**************** EDITING CATEGORIES ******************/
 			} else if (currentMode == uiMode.editCategories) {
 				GUILayout.BeginVertical ();
-				GUILayout.Label ("Editing categories");
+				GUILayout.Label (statusString);
 				if (GUILayout.Button ("Cancel")) {
 					currentMode = uiMode.normal;
+					modifyingCategory = DataStorage.ROOT_GUID; // set back if we press cancel!
 				}
 				GUILayout.EndVertical ();
 
+			/**************** NORMAL MODE ******************/
 			} else {
 				GUILayout.BeginHorizontal ();
 				if (GUILayout.Button("Add new category"))
@@ -152,6 +245,8 @@ namespace VesCat
 				if (GUILayout.Button("Edit categories")) 
 				{
 					currentMode = uiMode.editCategories;
+					modifyingCategory = DataStorage.ROOT_GUID;
+					statusString = "Click a category to move...";
 				}
 				GUILayout.EndHorizontal ();
 			}
