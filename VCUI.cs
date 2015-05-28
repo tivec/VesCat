@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -36,8 +37,6 @@ namespace VesCat
 		Guid moveCategory = DataStorage.ROOT_GUID;
 		// Vessel being moved
 		Guid moveVessel = DataStorage.ROOT_GUID;
-		// Vessel we are trying to control
-		Guid ctrlVessel = DataStorage.ROOT_GUID;
 
 		uiMode currentMode = uiMode.normal;
 
@@ -144,6 +143,7 @@ namespace VesCat
 
 
 				} else if (currentMode == uiMode.movingCategory) {
+
 					if (GUILayout.Button(category.Value, UIStyle.UISkin.customStyles [(int)uiStyles.categoryButton])) {
 						// if we are clicking a button, and the modifyingCategory Guid is ROOT_GUID, we want to set the
 						// modifying category option.
@@ -181,24 +181,14 @@ namespace VesCat
 						switch (Event.current.button) {
 						case 0:
 							if (currentMode == uiMode.normal) {
-
 								if (HighLogic.LoadedScene == GameScenes.FLIGHT) {
 									FlightGlobals.fetch.SetVesselTarget(Tools.GetVessel(vesselId));
 
+									CommonTools.FocusMapCamera (Tools.GetVessel(vesselId));
 
 								} else if (HighLogic.LoadedScene == GameScenes.TRACKSTATION) {
-									MapObject obj = new MapObject (); 
-									obj.vessel = Tools.GetVessel (vesselId);
-									obj.type = MapObject.MapObjectType.VESSEL;
-									//PlanetariumCamera.fetch.AddTarget (obj);
-									//PlanetariumCamera.fetch.SetTarget (obj);
-									MapView.MapCamera.AddTarget (obj);
-									MapView.MapCamera.SetTarget (obj);
-									scheduled.Add (() => {
-										ctrlVessel = vesselId;
-									});
+									CommonTools.FocusMapCamera (Tools.GetVessel (vesselId));
 								}
-
 							}
 							break;
 						case 1:
@@ -210,13 +200,19 @@ namespace VesCat
 
 					}
 
-					if (ctrlVessel.Equals(vesselId)) {
-						if (GUILayout.Button("Control",GUILayout.Width(75))) {
+					if (HighLogic.LoadedScene == GameScenes.FLIGHT || HighLogic.LoadedScene == GameScenes.TRACKSTATION) {
+						if (GUILayout.Button ("Control", GUILayout.Width (75))) {
 							if (!vesselId.Equals (DataStorage.ROOT_GUID)) {
-
+								if (HighLogic.LoadedScene == GameScenes.TRACKSTATION) {
+									CommonTools.TrackingCenterSwitchTo (Tools.GetVessel (vesselId));
+								} else {
+									FlightGlobals.SetActiveVessel (Tools.GetVessel (vesselId));
+								}
 							}
 						}
 					}
+
+
 					GUILayout.EndHorizontal ();
 				}
 			}
