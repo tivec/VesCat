@@ -36,6 +36,8 @@ namespace VesCat
 		Guid moveCategory = DataStorage.ROOT_GUID;
 		// Vessel being moved
 		Guid moveVessel = DataStorage.ROOT_GUID;
+		// Vessel we are trying to control
+		Guid ctrlVessel = DataStorage.ROOT_GUID;
 
 		uiMode currentMode = uiMode.normal;
 
@@ -180,10 +182,21 @@ namespace VesCat
 						case 0:
 							if (currentMode == uiMode.normal) {
 
-								if (HighLogic.LoadedScene == GameScenes.TRACKSTATION) {
-									ScreenMessages.PostScreenMessage ("VesCat: Loaded Scene Has Planetarium: " + HighLogic.LoadedSceneHasPlanetarium.ToString());
-									MapObject mapObject = PlanetariumCamera.fetch.targets.Find(o => (o.vessel != null) && o.vessel.id == vesselId);
-									MapView.MapCamera.SetTarget(mapObject);
+								if (HighLogic.LoadedScene == GameScenes.FLIGHT) {
+									FlightGlobals.fetch.SetVesselTarget(Tools.GetVessel(vesselId));
+
+
+								} else if (HighLogic.LoadedScene == GameScenes.TRACKSTATION) {
+									MapObject obj = new MapObject (); 
+									obj.vessel = Tools.GetVessel (vesselId);
+									obj.type = MapObject.MapObjectType.VESSEL;
+									//PlanetariumCamera.fetch.AddTarget (obj);
+									//PlanetariumCamera.fetch.SetTarget (obj);
+									MapView.MapCamera.AddTarget (obj);
+									MapView.MapCamera.SetTarget (obj);
+									scheduled.Add (() => {
+										ctrlVessel = vesselId;
+									});
 								}
 
 							}
@@ -195,6 +208,14 @@ namespace VesCat
 							break;
 						}
 
+					}
+
+					if (ctrlVessel.Equals(vesselId)) {
+						if (GUILayout.Button("Control",GUILayout.Width(75))) {
+							if (!vesselId.Equals (DataStorage.ROOT_GUID)) {
+
+							}
+						}
 					}
 					GUILayout.EndHorizontal ();
 				}

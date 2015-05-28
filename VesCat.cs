@@ -24,6 +24,11 @@ namespace VesCat
 			Data.NeedUpdate = true;
 		}
 
+		public void onTargetChange(MapObject obj)
+		{
+			ScreenMessages.PostScreenMessage ("Target changed to " + obj.GetName ());
+		}
+
 		void Start()
 		{
 			Debug.Log("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: Start");
@@ -36,6 +41,7 @@ namespace VesCat
 			GameEvents.onVesselCreate.Add (NeedVesselsUpdate);
 			GameEvents.onVesselDestroy.Add (NeedVesselsUpdate);
 			GameEvents.onVesselChange.Add (NeedVesselsUpdate);
+			GameEvents.onPlanetariumTargetChanged.Add (onTargetChange);
 		}
 
 		public override void OnLoad (ConfigNode node)
@@ -166,6 +172,7 @@ namespace VesCat
 			GameEvents.onVesselCreate.Remove (NeedVesselsUpdate);
 			GameEvents.onVesselDestroy.Remove (NeedVesselsUpdate);
 			GameEvents.onVesselChange.Remove (NeedVesselsUpdate);
+			GameEvents.onPlanetariumTargetChanged.Remove (onTargetChange);
 
 			Debug.Log ("[VesCat [" + this.GetInstanceID ().ToString ("X") + "][" + Time.time.ToString ("0.0000") + "]: OnDestroy");
 		}
