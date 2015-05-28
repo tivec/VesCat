@@ -40,7 +40,7 @@ namespace VesCat
 		}
 
 
-		// Code for this is based off of how HaystackContinued (https://qberticus/HaystackContinued) does camera focus.
+		// Code for this is based off of how HaystackContinued (https://github.com/qberticus/HaystackContinued) does camera focus.
 		public static void FocusMapCamera(Vessel v) 
 		{
 			if (HighLogic.LoadedScene == GameScenes.TRACKSTATION) {
@@ -58,7 +58,7 @@ namespace VesCat
 			}
 		}
 
-		// Code for this is based off of how HaystackContinued (https://qberticus/HaystackContinued) switches vessels
+		// Code for this is based off of how HaystackContinued (https://github.com/qberticus/HaystackContinued) switches vessels
 		public static void TrackingCenterSwitchTo(Vessel v)
 		{
 			var trackObject = (SpaceTracking) UnityEngine.Object.FindObjectOfType (typeof(SpaceTracking));
